@@ -29,6 +29,11 @@ could change the active profile out from under you, the deck would show one
 profile while you edit another — so Stream Deck freezes the active profile to
 the edited one until you close the window. It's an editing-coherence lock.
 
+**The consequence drives the whole design:** since you simply *cannot* switch
+while the editor is open, the tool's very first step is always to **close the
+editor window** (`Cmd-W`; Stream Deck keeps running in the menu bar). Only once
+that lock is lifted does the actual profile switch go through.
+
 ## The mechanism: ghost apps + a focus bounce
 
 Stream Deck also supports **app-specific profiles**: bind a profile to an
