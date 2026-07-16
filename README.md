@@ -145,34 +145,47 @@ editor is already closed (or when you close it yourself first). Pass
 Ghost apps themselves need **no permission** — they only become frontmost and
 quit.
 
-## Switch from a Stream Deck button — even with the editor open
+## Trigger a switch from a script, MIDI, or a button — the daemon
 
-A Stream Deck **button** can't close the editor window itself: the apps a
-button can launch are ad-hoc-signed and don't get a working Accessibility grant
-(see [findings](#investigations--findings)). The way around it is to **decouple
-the signal from the privileged action** with a small daemon:
+A Stream Deck **button can't switch while the editor is open** — for two reasons:
+the editor **captures deck presses for editing** (it selects the key instead of
+running its action), and a button can't close the editor itself (its ad-hoc apps
+don't get Accessibility — see [findings](#investigations--findings)). The way
+around both is to **decouple the trigger from the privileged action** with a
+small daemon that runs in a terminal you've granted Accessibility:
 
-- The **button only signals** — it writes the profile name to a FIFO:
-  `echo "Live Set" > /tmp/sd-switch`. Writing a file needs **no permission**, so
-  any plugin can do it (e.g. an *OSAScript* / `do shell script` action).
-- A **daemon** ([`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh)) watches
-  the FIFO and runs `sd-profile.sh` for each name — closing the editor, then
-  switching. Run it from a terminal you've granted Accessibility; the daemon
-  **inherits that terminal's (robust, properly-signed) Accessibility**, which is
-  why it works where a stand-alone signed applet failed with `1002`.
+- the **trigger only signals** — no permission needed;
+- the **daemon** runs `sd-profile.sh` (close the editor, then switch), inheriting
+  the terminal's (robust, properly-signed) Accessibility — which is why it works
+  where a stand-alone signed applet failed with `1002`.
+
+Two daemons — pick your trigger:
+
+**File / FIFO** — [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh): a trigger
+writes a profile name to a FIFO.
 
 ```bash
-# once: grant your terminal Accessibility, then start the daemon
 bin/sd-switch-daemon.sh                 # watches /tmp/sd-switch
-
-# from a Stream Deck button (or anywhere) — no permission needed:
-echo "Live Set" > /tmp/sd-switch
+echo "Live Set" > /tmp/sd-switch        # from a shell, or an OSAScript button
 ```
 
-Validated by triggering the FIFO from an Accessibility-holding context: the
-editor window closes **and** the profile switches, even when the editor started
-open. Remaining setup for a hands-off rig: wire the button's shell action to the
-`echo`, and keep the daemon alive — a login terminal, or a launchd agent (verify
+A Stream Deck button (a `do shell script` action) can write the FIFO — but only
+while the editor is **closed** (open editor = the press is captured for editing).
+
+**MIDI** — [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py): a MIDI note/CC
+triggers the switch (map notes → profiles in
+[`bin/sd-midi-map.json`](bin/sd-midi-map.json)).
+
+```bash
+bin/sd-switch-midi.py                   # opens a virtual "SD Profile Switch" port
+```
+
+This is the one that **switches even while the editor is open**: a MIDI message
+from a **non-Stream-Deck** source (a controller, a pedal, Bome, your DAW) is
+**not** captured by the editor. Route MIDI to the virtual port and map notes to
+profiles. Requires `mido` + `python-rtmidi`.
+
+Keep the daemon alive from a login terminal, or a launchd agent (verify
 Accessibility attribution for launchd-spawned processes in your setup).
 
 ---
@@ -188,6 +201,19 @@ Recorded here so you don't have to rediscover them.
   does not switch; the same launch switches instantly once the window is
   closed. There is no switch path that survives the open editor — closing the
   window first is unavoidable.
+
+- **The open editor also captures deck presses.** While the config window is
+  open, pressing a physical key *selects it for editing* — its action does not
+  run at all. So a Stream Deck **button can't trigger anything while you're
+  editing**, no matter what it's wired to. A trigger the editor doesn't capture
+  (a MIDI message from another device, a global hotkey, a terminal command) is
+  the only way to switch while the editor is open.
+
+- **After closing the editor, wait before switching.** The editor lock is
+  released a beat *after* the window closes. Close-then-switch in one tight
+  sequence (0.2 s) is ignored; ~1.3 s is reliable. `sd-profile.sh` now waits
+  that long — but only when it actually closed a window, so the editor-closed
+  path (a live gig) stays fast.
 
 - **Ad-hoc-signed AppleScript applets do NOT get functional Accessibility.**
   An earlier design had each *ghost app* close the editor itself. It never
@@ -225,7 +251,9 @@ Recorded here so you don't have to rediscover them.
 | Path | What it is |
 |---|---|
 | [`bin/sd-profile.sh`](bin/sd-profile.sh) | CLI: close the editor (from the terminal) then switch a profile by name |
-| [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh) | FIFO watcher so a button (or any process) can switch by writing a name — closes the editor even when open |
+| [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh) | FIFO watcher: switch by writing a profile name to `/tmp/sd-switch` |
+| [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py) | MIDI watcher: a note/CC switches a profile — works even while the editor is open |
+| [`bin/sd-midi-map.json`](bin/sd-midi-map.json) | note/CC → profile-name map for the MIDI daemon |
 | [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app |
 | [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
 

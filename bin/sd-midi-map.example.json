@@ -1,0 +1,7 @@
+{
+  "virtual": true,
+  "port": "SD Profile Switch",
+  "channel": null,
+  "notes": { "60": "Live Set", "62": "Ableton — Record" },
+  "cc": {}
+}

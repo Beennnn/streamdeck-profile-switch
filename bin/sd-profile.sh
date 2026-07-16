@@ -42,23 +42,36 @@ fi
 # Closes the Stream Deck editor window if open (Stream Deck keeps running in
 # the menu bar). Non-fatal: if Accessibility isn't granted, we warn and go on.
 close_sd_config() {
-  if ! /usr/bin/osascript <<'OSA' >/dev/null 2>&1
+  # Renvoie "closed" si une fenetre d'editeur ouverte a bien ete fermee, sinon
+  # "none" (ou vide si l'Accessibilite manque). On n'attend le delai long QUE
+  # si on a vraiment ferme : le verrou de l'editeur n'est relache qu'un instant
+  # APRES la fermeture, sinon la bascule ghost qui suit est ignoree (mesure :
+  # 0,2 s trop court, ~1,3 s fiable). Cas editeur-ferme (concert) : reste rapide.
+  local result
+  result="$(/usr/bin/osascript <<'OSA' 2>/dev/null
 tell application "System Events"
 	if exists (process "Stream Deck") then
 		tell process "Stream Deck"
 			if (count of windows) > 0 then
 				set frontmost to true
 				keystroke "w" using command down
+				return "closed"
 			end if
 		end tell
 	end if
+	return "none"
 end tell
 OSA
-  then
-    echo "⚠️  Could not close the SD editor (Accessibility not granted to your terminal?)." >&2
+)"
+  if [[ -z "$result" ]]; then
+    echo "⚠️  Could not talk to the SD editor (Accessibility not granted to your terminal?)." >&2
     echo "    System Settings → Privacy & Security → Accessibility → enable your terminal." >&2
   fi
-  sleep 0.2   # let the window finish closing before Stream Deck re-evaluates
+  if [[ "$result" == "closed" ]]; then
+    sleep 1.3   # laisser Stream Deck relacher le verrou avant la bascule
+  else
+    sleep 0.1
+  fi
 }
 
 # All JSON parsing + matching happens in Python: profile names can contain
