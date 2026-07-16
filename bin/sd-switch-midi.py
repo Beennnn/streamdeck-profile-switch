@@ -24,8 +24,8 @@ Mapping: a JSON file next to this script, `sd-midi-map.json`:
     "virtual": true,
     "port": "SD Profile Switch",
     "channel": null,                 // null = any channel, or 1..16
-    "notes": { "60": "Songs", "62": "FNK - Chameleon" },
-    "cc":    { }                     // optional: "20": "Live Set"  (on value>0)
+    "notes": { "60": "Live Set", "62": "Ableton — Record" },
+    "cc":    { }                     // optional: "20": "Rehearsal"  (on value>0)
   }
 
 Requires: mido + python-rtmidi  (pip install mido python-rtmidi)
