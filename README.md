@@ -145,6 +145,36 @@ editor is already closed (or when you close it yourself first). Pass
 Ghost apps themselves need **no permission** — they only become frontmost and
 quit.
 
+## Switch from a Stream Deck button — even with the editor open
+
+A Stream Deck **button** can't close the editor window itself: the apps a
+button can launch are ad-hoc-signed and don't get a working Accessibility grant
+(see [findings](#investigations--findings)). The way around it is to **decouple
+the signal from the privileged action** with a small daemon:
+
+- The **button only signals** — it writes the profile name to a FIFO:
+  `echo "Live Set" > /tmp/sd-switch`. Writing a file needs **no permission**, so
+  any plugin can do it (e.g. an *OSAScript* / `do shell script` action).
+- A **daemon** ([`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh)) watches
+  the FIFO and runs `sd-profile.sh` for each name — closing the editor, then
+  switching. Run it from a terminal you've granted Accessibility; the daemon
+  **inherits that terminal's (robust, properly-signed) Accessibility**, which is
+  why it works where a stand-alone signed applet failed with `1002`.
+
+```bash
+# once: grant your terminal Accessibility, then start the daemon
+bin/sd-switch-daemon.sh                 # watches /tmp/sd-switch
+
+# from a Stream Deck button (or anywhere) — no permission needed:
+echo "Live Set" > /tmp/sd-switch
+```
+
+Validated by triggering the FIFO from an Accessibility-holding context: the
+editor window closes **and** the profile switches, even when the editor started
+open. Remaining setup for a hands-off rig: wire the button's shell action to the
+`echo`, and keep the daemon alive — a login terminal, or a launchd agent (verify
+Accessibility attribution for launchd-spawned processes in your setup).
+
 ---
 
 ## Investigations & findings
@@ -195,6 +225,7 @@ Recorded here so you don't have to rediscover them.
 | Path | What it is |
 |---|---|
 | [`bin/sd-profile.sh`](bin/sd-profile.sh) | CLI: close the editor (from the terminal) then switch a profile by name |
+| [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh) | FIFO watcher so a button (or any process) can switch by writing a name — closes the editor even when open |
 | [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app |
 | [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
 
