@@ -147,43 +147,45 @@ quit.
 
 ## Trigger a switch from a script, MIDI, or a button — the daemon
 
-A Stream Deck **button can't switch while the editor is open** — for two reasons:
-the editor **captures deck presses for editing** (it selects the key instead of
-running its action), and a button can't close the editor itself (its ad-hoc apps
-don't get Accessibility — see [findings](#investigations--findings)). The way
-around both is to **decouple the trigger from the privileged action** with a
-small daemon that runs in a terminal you've granted Accessibility:
+A Stream Deck button can't switch profiles on its own while the editor is open:
+the switch mechanisms (app-linked profiles, the WebSocket API) are all suppressed
+until the editor closes, and a button's ad-hoc apps can't close it (they don't
+get Accessibility — see [findings](#investigations--findings)). The way around it
+is to **decouple the trigger from the privileged action** with a small daemon
+that runs in a terminal you've granted Accessibility:
 
 - the **trigger only signals** — no permission needed;
 - the **daemon** runs `sd-profile.sh` (close the editor, then switch), inheriting
   the terminal's (robust, properly-signed) Accessibility — which is why it works
   where a stand-alone signed applet failed with `1002`.
 
-Two daemons — pick your trigger:
+A **physical deck press fires its action even while the editor is open** (the
+editor only intercepts *software* clicks on keys, not hardware presses). So a
+button wired to *signal the daemon* switches even while you're editing — writing
+the trigger needs no permission, and the daemon does the privileged part.
 
-**File / FIFO** — [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh): a trigger
-writes a profile name to a FIFO.
+Two triggers — pick one (or both):
+
+**File / FIFO** — [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh): the trigger
+writes a profile name to a FIFO. A Stream Deck **button** using a `do shell script`
+(OSAScript) action does exactly this — and it works **even with the editor open**.
 
 ```bash
 bin/sd-switch-daemon.sh                 # watches /tmp/sd-switch
-echo "Live Set" > /tmp/sd-switch        # from a shell, or an OSAScript button
+echo "Live Set" > /tmp/sd-switch        # from a shell, or from an OSAScript button
 ```
-
-A Stream Deck button (a `do shell script` action) can write the FIFO — but only
-while the editor is **closed** (open editor = the press is captured for editing).
 
 **MIDI** — [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py): a MIDI note/CC
 triggers the switch (map notes → profiles in
-[`bin/sd-midi-map.json`](bin/sd-midi-map.json)).
+[`bin/sd-midi-map.json`](bin/sd-midi-map.json)). Handy when the trigger should
+come from a controller, a pedal, Bome, or your DAW rather than the deck.
 
 ```bash
 bin/sd-switch-midi.py                   # opens a virtual "SD Profile Switch" port
 ```
 
-This is the one that **switches even while the editor is open**: a MIDI message
-from a **non-Stream-Deck** source (a controller, a pedal, Bome, your DAW) is
-**not** captured by the editor. Route MIDI to the virtual port and map notes to
-profiles. Requires `mido` + `python-rtmidi`.
+Requires `mido` + `python-rtmidi`. Route MIDI to the virtual port and map notes
+to profiles.
 
 Keep the daemon alive from a login terminal, or a launchd agent (verify
 Accessibility attribution for launchd-spawned processes in your setup).
@@ -202,12 +204,13 @@ Recorded here so you don't have to rediscover them.
   closed. There is no switch path that survives the open editor — closing the
   window first is unavoidable.
 
-- **The open editor also captures deck presses.** While the config window is
-  open, pressing a physical key *selects it for editing* — its action does not
-  run at all. So a Stream Deck **button can't trigger anything while you're
-  editing**, no matter what it's wired to. A trigger the editor doesn't capture
-  (a MIDI message from another device, a global hotkey, a terminal command) is
-  the only way to switch while the editor is open.
+- **Physical deck presses DO fire while the editor is open.** The editor
+  intercepts only *software* clicks on keys inside its window, not hardware
+  presses — a button's action runs normally even while you're editing. What the
+  open editor blocks is the *switch itself* (app-linked profiles / API), not the
+  button firing. So a button that merely *signals* the daemon (an OSAScript
+  `do shell script` writing the FIFO) works even with the editor open: the daemon
+  holds the Accessibility to close the editor, then switches.
 
 - **After closing the editor, wait before switching.** The editor lock is
   released a beat *after* the window closes. Close-then-switch in one tight
@@ -251,9 +254,9 @@ Recorded here so you don't have to rediscover them.
 | Path | What it is |
 |---|---|
 | [`bin/sd-profile.sh`](bin/sd-profile.sh) | CLI: close the editor (from the terminal) then switch a profile by name |
-| [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh) | FIFO watcher: switch by writing a profile name to `/tmp/sd-switch` |
-| [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py) | MIDI watcher: a note/CC switches a profile — works even while the editor is open |
-| [`bin/sd-midi-map.json`](bin/sd-midi-map.json) | note/CC → profile-name map for the MIDI daemon |
+| [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh) | FIFO watcher: switch by writing a profile name to `/tmp/sd-switch` (works even with the editor open) |
+| [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py) | MIDI watcher: a note/CC switches a profile (trigger from a controller, pedal, Bome, or DAW) |
+| [`bin/sd-midi-map.example.json`](bin/sd-midi-map.example.json) | example note/CC → profile map (copy to `sd-midi-map.json`, which is git-ignored) |
 | [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app |
 | [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
 
