@@ -1,44 +1,23 @@
 -- Ghost app — Stream Deck profile switcher
 -- ------------------------------------------------------------------
--- A "ghost app" is a tiny, invisible AppleScript applet whose only job is
--- to become the frontmost application for a fraction of a second. Stream
--- Deck watches which app is frontmost and switches to the profile bound to
--- it (the profile's "AppIdentifier"), so bringing this app forward triggers
--- a profile switch — then it quits and focus returns to whatever you were on.
+-- A "ghost app" is a tiny AppleScript applet whose only job is to become the
+-- frontmost application for a fraction of a second. Stream Deck watches which
+-- app is frontmost and switches to the profile bound to it (the profile's
+-- "AppIdentifier"), so bringing this app forward triggers a profile switch —
+-- then it quits and focus returns to whatever you were on.
 --
--- The catch: while the Stream Deck CONFIG WINDOW is open, it live-previews
--- the edited profile on the hardware and SUPPRESSES every profile switch
--- (app-association *and* the WebSocket API). So if the editor is open we
--- first close its window (Cmd-W — Stream Deck keeps running in the menu bar),
--- then re-take focus so Stream Deck replays the app-association now that the
--- lock is lifted.
+-- This applet does NOT try to close the Stream Deck config window itself.
+-- Closing it requires Accessibility permission, and ad-hoc-signed AppleScript
+-- applets do not get a working Accessibility grant on current macOS: the entry
+-- appears enabled in System Settings, yet System Events calls still fail with
+-- -25211 (see the "Investigations & findings" section of the README). So the
+-- editor is closed by `sd-profile.sh` instead — run from your terminal, which
+-- is a properly signed app and CAN hold Accessibility. Launched on its own, a
+-- ghost app therefore switches only when the editor window is already closed.
 --
--- The whole System Events block is wrapped in `try` so the applet ALWAYS
--- reaches `quit`, even if Accessibility permission hasn't been granted yet
--- (in that case it just can't close the editor, and behaves like the classic
--- ghost app — which only works when the editor is already closed).
+-- The `delay` is deliberate: 0.1 s was too short — Stream Deck sometimes missed
+-- the frontmost-app change and didn't switch. 0.45 s reliably latches it.
 
-set editorWasOpen to false
-try
-	tell application "System Events"
-		if exists (process "Stream Deck") then
-			tell process "Stream Deck"
-				if (count of windows) > 0 then
-					set editorWasOpen to true
-					set frontmost to true
-					keystroke "w" using command down
-				end if
-			end tell
-		end if
-	end tell
-end try
-
-if editorWasOpen then
-	delay 0.2
-	tell me to activate
-	delay 0.15
-else
-	delay 0.1
-end if
-
+tell me to activate
+delay 0.45
 tell me to quit

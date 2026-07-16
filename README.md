@@ -1,24 +1,28 @@
 # Stream Deck — switch profiles by name, from the command line
 
 Switch your Elgato **Stream Deck** to any profile **by its name**, from a
-script or the terminal — **reliably, even when the Stream Deck configuration
-window is open**.
+script or the terminal — **even when the Stream Deck configuration window is
+open**.
 
 ```bash
 sd-profile.sh "Live Set"
 sd-profile.sh "Ableton — Record"
 ```
 
-No plugin to write, no WebSocket server to keep alive. Just macOS + a tiny
-trick Stream Deck already supports: **ghost apps**.
+No plugin to write, no WebSocket server to keep alive. Just macOS + a small
+technique Stream Deck already supports: **app-linked profiles** ("ghost apps").
+
+> Uses only documented, supported Stream Deck features (app-linked profiles)
+> and standard macOS automation. Nothing about the Stream Deck software is
+> modified, reverse-engineered, or bypassed. See [Investigations & findings](#investigations--findings).
 
 ---
 
 ## Why this is harder than it should be
 
 Stream Deck has no public "switch to profile X by name" command for scripts.
-It exposes profile switching only in two ways, and **both are deliberately
-blocked while the Stream Deck configuration window is open**:
+It exposes profile switching only in two ways, and **both are intentionally
+suppressed while the Stream Deck configuration window is open**:
 
 - the WebSocket `switchToProfile` API (plugins only), and
 - the on-deck *Switch Profile* button action.
@@ -26,43 +30,47 @@ blocked while the Stream Deck configuration window is open**:
 That block isn't a bug. **While the editor window is open, it live-previews
 the profile you're editing directly on the hardware.** If a background switch
 could change the active profile out from under you, the deck would show one
-profile while you edit another — so Stream Deck freezes the active profile to
-the edited one until you close the window. It's an editing-coherence lock.
+profile while you edit another — so Stream Deck holds the active profile on the
+edited one until you close the window. It's an editing-coherence behaviour.
 
-**The consequence drives the whole design:** since you simply *cannot* switch
-while the editor is open, the tool's very first step is always to **close the
-editor window** (`Cmd-W`; Stream Deck keeps running in the menu bar). Only once
-that lock is lifted does the actual profile switch go through.
+**The consequence drives the whole design:** since a switch can't take effect
+while the editor is open, the tool's first step is to **close the editor
+window** (`Cmd-W`; Stream Deck keeps running in the menu bar). Once that window
+is closed, the switch goes through normally.
 
-## The mechanism: ghost apps + a focus bounce
+## The mechanism: app-linked profiles + a focus bounce
 
-Stream Deck also supports **app-specific profiles**: bind a profile to an
+Stream Deck supports **app-specific profiles**: bind a profile to an
 application, and Stream Deck switches to that profile whenever the app becomes
-frontmost. A **ghost app** abuses this: it's a near-empty AppleScript applet
-whose only job is to become frontmost for ~0.1 s and quit.
+frontmost. A **ghost app** uses this: it's a near-empty AppleScript applet
+whose only job is to become frontmost for ~0.45 s and quit.
 
-- Launch `SD_switch - Live Set.app` → it becomes frontmost → Stream Deck sees
-  the frontmost app change and switches to the bound profile → the app quits
-  and focus returns to whatever you were doing.
-- This is the **only** approach that survives the editor lock, because the very
-  thing it does — *change which app is frontmost* — is also what's needed to
-  release the lock. If the editor window is open, the ghost app **closes it
-  first** (`Cmd-W`; Stream Deck stays alive in the menu bar), then re-takes
-  focus so the app-association fires now that the lock is lifted.
+`sd-profile.sh` puts the two pieces together:
+
+1. **Close the editor window** if it's open — done by the *script*, from your
+   terminal (`Cmd-W` via System Events). This is the step that needs
+   Accessibility permission, and a terminal is a properly signed app that can
+   hold it reliably (see findings below).
+2. **Launch the ghost app** for the target profile → it becomes frontmost →
+   Stream Deck switches to the bound profile → the ghost app quits and focus
+   returns to whatever you were doing.
 
 ```
-launch ghost app
+sd-profile.sh "Live Set"
    │
-   ├─ editor window open?  ──yes──▶ close it (Cmd-W) ─▶ re-take focus
-   │                                                        │
-   └──────────────────────────no───────────────────────────┤
-                                                            ▼
-                          Stream Deck sees ghost app frontmost
-                                     ▼
-                          switches to the bound profile
-                                     ▼
-                              ghost app quits
+   ├─ 1. editor window open?  ──yes──▶ close it (Cmd-W, from the terminal)
+   │                                            │
+   └──────────────── no ────────────────────────┤
+                                                 ▼
+                     2. launch ghost app  →  it becomes frontmost
+                                                 ▼
+                        Stream Deck switches to the bound profile
+                                                 ▼
+                                    ghost app quits
 ```
+
+The ghost app itself does **nothing but switch** — it needs no permission. All
+the editor-closing lives in `sd-profile.sh`, run from your terminal.
 
 ---
 
@@ -71,8 +79,8 @@ launch ghost app
 - macOS
 - The Elgato **Stream Deck** app (tested on 7.5)
 - One **ghost app per profile** you want to switch to (built below)
-- **Accessibility permission** for whatever closes the editor window
-  (your terminal, and/or the ghost apps) — see below
+- **Accessibility permission for your terminal** — only needed to auto-close the
+  editor window; see [Permissions](#permissions-one-time)
 
 ## Install
 
@@ -120,24 +128,65 @@ sd-profile.sh --no-close-config … # don't touch the editor window
 Ambiguous names print the candidates and switch nothing. Profiles without a
 linked ghost app are reported as not switchable.
 
-## Accessibility permission (one time)
+## Permissions (one time)
 
-Closing the editor window uses macOS **System Events**, which requires
-**Accessibility** permission for the app that sends it:
+**To auto-close the editor window**, `sd-profile.sh` sends `Cmd-W` through macOS
+**System Events**, which requires **Accessibility** permission for the app that
+sends it — i.e. **your terminal**:
 
-**System Settings → Privacy & Security → Accessibility** → enable your
-terminal (for `sd-profile.sh`) and allow the ghost apps at first launch.
+**System Settings → Privacy & Security → Accessibility** → enable your terminal
+(Terminal, iTerm, …).
 
-**First launch** of a ghost app also pops a one-time **Automation** consent
-("… wants to control System Events") — allow it. All ghost apps built by
-`make-ghost-app.sh` share one bundle identifier
-(`com.streamdeck-profile-switch.ghostapp`), so you grant Automation and
-Accessibility **once** and every ghost app inherits it.
+That's the only permission needed. If you skip it, everything still runs — the
+editor just won't be closed automatically, so switching only works when the
+editor is already closed (or when you close it yourself first). Pass
+`--no-close-config` to skip the close step entirely.
 
-Without these permissions, everything still runs — the editor just won't be
-closed automatically, so switching only works when the editor is already
-closed (the classic ghost-app behaviour). The scripts never hang once the
-one-time consent has been answered.
+Ghost apps themselves need **no permission** — they only become frontmost and
+quit.
+
+---
+
+## Investigations & findings
+
+While hardening this on a real rig, a few things turned out to be non-obvious.
+Recorded here so you don't have to rediscover them.
+
+- **The editor lock suppresses *every* switch mechanism** — app-linked
+  profiles *and* the WebSocket API. Confirmed empirically: with the config
+  window open, launching a ghost app changes the frontmost app but the deck
+  does not switch; the same launch switches instantly once the window is
+  closed. There is no switch path that survives the open editor — closing the
+  window first is unavoidable.
+
+- **Ad-hoc-signed AppleScript applets do NOT get functional Accessibility.**
+  An earlier design had each *ghost app* close the editor itself. It never
+  worked: with Accessibility granted to the ghost app and its toggle enabled,
+  `count of windows` on the Stream Deck process still returns **-25211**
+  ("not authorized to send Apple events / accessibility"). This was reproduced
+  with the app at a stable local path (ruling out symlinked/cloud paths) and
+  after re-signing the applet with a self-signed certificate — macOS lists the
+  entry but does not validate it for an ad-hoc/AppleScript-applet identity.
+  Sending a keystroke from such an app fails the same way (error `1002`,
+  "not allowed to send keystrokes"). **Conclusion:** the editor close must be
+  driven by a **properly signed** app that can hold Accessibility — in practice,
+  **your terminal**. Hence the design above: the script closes the editor, the
+  ghost app only switches.
+
+- **`keystroke` posting and UI reading both need Accessibility.** It's not
+  enough to grant Automation ("control System Events"): reading `count of
+  windows` and posting `Cmd-W` both require the *sending* app to hold
+  Accessibility. Automation alone gets you past the consent prompt but still
+  fails these calls.
+
+- **Dwell time matters.** A ghost app that quits after 0.1 s sometimes quits
+  before Stream Deck registers the frontmost-app change, so the switch is
+  missed. Staying frontmost ~0.45 s makes it reliable. (See
+  [`ghost-app/main.applescript`](ghost-app/main.applescript).)
+
+- **Bundle identifier / signing on ghost apps is now irrelevant.** Since the
+  ghost apps no longer touch System Events, they need no Automation or
+  Accessibility grant at all — so there's nothing to share across them.
 
 ---
 
@@ -145,9 +194,17 @@ one-time consent has been answered.
 
 | Path | What it is |
 |---|---|
-| [`bin/sd-profile.sh`](bin/sd-profile.sh) | CLI: switch a profile by name; closes the editor first |
+| [`bin/sd-profile.sh`](bin/sd-profile.sh) | CLI: close the editor (from the terminal) then switch a profile by name |
 | [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app |
-| [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (close editor → bounce focus → quit) |
+| [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
+
+## Disclaimer
+
+Personal project, **not affiliated with, authorized, or endorsed by Elgato or
+Corsair**. *Stream Deck* and *Elgato* are trademarks of Corsair. This tool uses
+only documented, supported Stream Deck features (app-linked profiles) together
+with standard macOS automation; it does not modify, reverse-engineer, or bypass
+any Elgato software.
 
 ## License
 

@@ -49,17 +49,12 @@ fi
 # de la source AppleScript. C'est l'outil standard pour CRÉER une ghost app.
 osacompile -o "$app_path" "$applescript"
 
-# osacompile ne pose AUCUN bundle identifier. macOS indexe alors les
-# permissions (Automation pour piloter System Events, Accessibilité pour
-# fermer la fenêtre) par identité d'app — sans ID partagé, CHAQUE ghost app
-# redemanderait l'autorisation. On force donc un ID commun : toutes les ghost
-# apps créées par ce script partagent une seule autorisation → tu accordes une
-# fois, ça couvre toutes les suivantes.
+# A ghost app only needs to become frontmost and quit — it uses NO special
+# permission (no Automation, no Accessibility), so nothing else to set up here.
+# On pose quand même un bundle identifier commun (propreté / dédoublonnage
+# LaunchServices) ; ce n'est PAS requis pour que la bascule fonctionne.
 GHOST_BUNDLE_ID="com.streamdeck-profile-switch.ghostapp"
-/usr/bin/defaults write "$app_path/Contents/Info.plist" CFBundleIdentifier "$GHOST_BUNDLE_ID"
-# Re-signe ad-hoc pour lier l'ID à la signature (sinon macOS ignore parfois
-# l'Info.plist modifié). `-` = signature ad-hoc locale, sans certificat.
-/usr/bin/codesign --force --sign - "$app_path" >/dev/null 2>&1 || true
+/usr/bin/defaults write "$app_path/Contents/Info.plist" CFBundleIdentifier "$GHOST_BUNDLE_ID" 2>/dev/null || true
 
 echo "✅ Ghost app créée :"
 echo "   $app_path"
