@@ -19,6 +19,13 @@ echo toggle > /tmp/sd-switch # or hide / show the editor window
 > Uses only documented, supported Stream Deck features (app-linked profiles)
 > and standard macOS automation. Nothing about the Stream Deck software is
 > modified, reverse-engineered, or bypassed. See [Investigations & findings](#investigations--findings).
+>
+> **DeckShift fills a gap** — script/MIDI-driven profile switching that Elgato's
+> plugin API deliberately doesn't expose — **while respecting the safeguard that
+> restriction protects** (no switching API is handed to other plugins; everything
+> stays under the user's control — see
+> [Why this respects Elgato's design](#why-this-respects-elgatos-design-and-doesnt-reintroduce-what-they-guard-against)).
+> An **official Elgato capability would gladly make it unnecessary.**
 
 ---
 
@@ -463,7 +470,7 @@ cheapest first:
    separate helper is needed**. Untested — the cheapest path, worth trying first.
    **This is also the natural request to make to Elgato:** a supported way to
    close the editor (or an official blessing to grant the app Accessibility for
-   plugins) would retire this whole class of hacks — and an official *"switch to a
+   plugins) would retire this whole class of workarounds — and an official *"switch to a
    user profile"* API would retire the ghost apps entirely.
 2. A **bundled, properly signed helper** (a small Swift/ObjC binary that posts the
    keystroke; Developer-ID ideally — the self-signed applet failed with `1002`).
