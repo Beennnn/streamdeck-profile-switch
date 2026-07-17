@@ -54,6 +54,28 @@ automation). It is almost certainly not the only way. **If you know a simpler
 or better path that respects the same constraints, please open an issue or PR**
 — see [Contributing & alternatives](#contributing--alternatives).
 
+### Why this respects Elgato's design (and doesn't reintroduce what they guard against)
+
+Elgato restricts the `switchToProfile` API to profiles a *plugin* bundles, so a
+third-party plugin can't switch a user's own profiles. That restriction reads
+best not as *"users shouldn't switch profiles"* — Elgato's own app ships a
+**Switch Profile** action and **app-linked profiles** — but as a **safeguard**:
+don't hand arbitrary plugins an API that lets them switch the active profile out
+from under the user, uncontrolled.
+
+**DeckShift keeps exactly that safeguard.** It does **not** expose a switching
+API to other plugins. It's a **user-side** tool: *you* install it, *you* grant
+the one permission, and *you* wire *your own* profiles to *your own*
+buttons/scripts (via Elgato's supported app-linked-profile feature). So it gives
+users the capability Elgato's own UI already hints at — **reliably, even with the
+editor open** — **without** reintroducing the uncontrolled, plugin-initiated
+switching the sandbox is there to prevent. The control stays with the user.
+
+That's the lens we'd bring to any conversation with Elgato: this fills a real
+gap (script/MIDI-driven profile switching) *while honouring the reason the API
+is sandboxed* — and the cleanest end-state would be an official capability from
+Elgato that makes tools like this unnecessary.
+
 ---
 
 ## Why this is harder than it should be
