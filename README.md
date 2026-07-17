@@ -18,6 +18,40 @@ technique Stream Deck already supports: **app-linked profiles** ("ghost apps").
 
 ---
 
+## The need
+
+You're mid-set (or mid-edit) and you want a **button — or a MIDI script, or a
+shell command — to jump the Stream Deck to a named profile.** Stream Deck offers
+no such command, and every known workaround breaks the moment the configuration
+window is open. This project makes it work anyway, reliably.
+
+## The constraints we work within (Apple + Elgato)
+
+This is harder than it should be because of deliberate choices by **both**
+vendors — none of which we can change. The whole design is shaped by them:
+
+**Elgato**
+- No public "switch to profile X by name" command for scripts.
+- Profile switching (app-linked *and* the WebSocket API) is **suppressed while
+  the configuration window is open** — an editing-coherence lock.
+- The API explicitly forbids third-party plugins from switching user profiles.
+
+**Apple (macOS)**
+- Closing the editor window programmatically requires **Accessibility**
+  permission — a manual, per-machine grant that cannot be automated.
+- **Ad-hoc-signed AppleScript applets never get a working Accessibility grant**
+  (verified: `-25211` even when enabled; a properly signed helper still failed
+  to post keystrokes, `1002`). So the app a button launches can't do it itself.
+
+**This project is the simplest approach we have found that stays _compatible_
+with all of the above** — it works *within* the limitations instead of fighting
+them (no reverse-engineering, no bypass, only documented features + standard
+automation). It is almost certainly not the only way. **If you know a simpler
+or better path that respects the same constraints, please open an issue or PR**
+— see [Contributing & alternatives](#contributing--alternatives).
+
+---
+
 ## Why this is harder than it should be
 
 Stream Deck has no public "switch to profile X by name" command for scripts.
@@ -318,6 +352,21 @@ Recorded here so you don't have to rediscover them.
 | [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app (the switch target) |
 | [`bin/make-signal-app.sh`](bin/make-signal-app.sh) | Build a `SD-sig - <name>.app` signal app (a button launches it to trigger the daemon; works with the editor open) |
 | [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
+
+## Contributing & alternatives
+
+This is deliberately open. The approach here is the **simplest one we could find
+that stays compatible with the Apple + Elgato constraints above** — but it is
+not elegant (a background daemon, an Accessibility grant, one small app per
+profile) and it is very likely not the only path.
+
+If you can find a **simpler or cleaner alternative that respects the same
+constraints** — a way to close the editor without Accessibility, a single app
+that receives the profile name, a proper signed helper that holds Accessibility
+reliably, a real Stream Deck plugin, anything — **please open an issue or a PR.**
+The [Investigations & findings](#investigations--findings) section documents the
+dead ends we already hit, so you don't have to repeat them. Corrections welcome
+too: if a finding here is wrong on your macOS / Stream Deck version, say so.
 
 ## Disclaimer
 
