@@ -29,6 +29,7 @@ set -uo pipefail
 FIFO="${1:-/tmp/sd-switch}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SD_PROFILE="$HERE/sd-profile.sh"
+SD_WINDOW="$HERE/sd-window.sh"
 
 if [[ ! -x "$SD_PROFILE" ]]; then
   echo "❌ Introuvable ou non exécutable : $SD_PROFILE" >&2
@@ -50,11 +51,20 @@ echo "    Ctrl-C pour arrêter."
 while true; do
   if IFS= read -r name < "$FIFO"; then
     [[ -z "${name// }" ]] && continue
-    echo "→ $(date '+%H:%M:%S')  switch: $name"
-    if "$SD_PROFILE" "$name"; then
-      echo "   ✅ ok"
-    else
-      echo "   ⚠️  échec ($name)"
-    fi
+    case "$name" in
+      # reserved words control the editor window instead of switching a profile
+      hide|masquer|show|afficher|toggle|bascule)
+        echo "→ $(date '+%H:%M:%S')  window: $name"
+        "$SD_WINDOW" "$name" && echo "   ✅ ok" || echo "   ⚠️  échec ($name)"
+        ;;
+      *)
+        echo "→ $(date '+%H:%M:%S')  switch: $name"
+        if "$SD_PROFILE" "$name"; then
+          echo "   ✅ ok"
+        else
+          echo "   ⚠️  échec ($name)"
+        fi
+        ;;
+    esac
   fi
 done

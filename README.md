@@ -278,6 +278,27 @@ permission — TCC is evaluated when the process starts, so a daemon launched
 - Generate ghost + signal apps for all switchable profiles at once with
   [`bin/gen-apps.sh`](bin/gen-apps.sh).
 
+### Editor-window commands (hide / show / toggle)
+
+The daemon also understands three **reserved words** that control the config
+window instead of switching a profile:
+
+| word | effect |
+|---|---|
+| `hide` (`masquer`) | close the editor window |
+| `show` (`afficher`) | open the editor window |
+| `toggle` (`bascule`) | close if open, open if closed |
+
+Same plumbing as a profile switch — build a signal app and bind a button:
+
+```bash
+bin/make-signal-app.sh "hide"      # → SD-sig - hide.app  (button launches it)
+echo hide > /tmp/sd-switch          # or straight from a shell / script
+```
+
+(These names are reserved: a profile literally called `hide`/`show`/`toggle`
+would be shadowed. See [`bin/sd-window.sh`](bin/sd-window.sh).)
+
 ### MIDI trigger (optional, no signal apps)
 
 If you'd rather trigger from a **controller, pedal, Bome, or your DAW**,
