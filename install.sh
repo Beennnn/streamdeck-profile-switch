@@ -68,10 +68,19 @@ cat <<'MSG'
 ONE manual step — grant Accessibility (macOS security, can't be automated):
 
   System Settings → Privacy & Security → Accessibility
+  → click "+", press ⌘⇧G, enter:  /bin/bash  → add it → enable the toggle.
 
-  Enable the process that RUNS the daemon so it can close the editor window.
-  The Accessibility pane is opening now. See the README ("Setup") for exactly
-  which entry to add for a LaunchAgent-hosted daemon on your macOS version.
+  The LaunchAgent runs the daemon via /bin/bash, so /bin/bash is the process
+  that needs Accessibility to close the editor window. (Verified working.)
+  It's a broad grant — every bash script gets Accessibility — acceptable on a
+  personal machine; if you prefer to scope it, host the daemon in a signed app
+  instead (see the README).
+
+  The Accessibility pane is opening now.
+
+IMPORTANT: after enabling /bin/bash, RE-RUN this installer so the daemon
+restarts and picks up the grant (TCC is evaluated when the process starts):
+  ./install.sh
 
 Then build a signal app for a profile and wire a button to launch it:
   bin/make-signal-app.sh "Live Set"

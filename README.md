@@ -248,6 +248,36 @@ and *why it is shaped this way*.
 > profile name is baked into each signal app rather than passed as an argument.
 > `make-signal-app.sh` generates them; they need no permission and no binding.
 
+### Run it permanently (LaunchAgent — no terminal window)
+
+Running `bin/sd-switch-daemon.sh` from a terminal works, but that terminal has to
+stay open. To have the daemon **start at login and stay up with no visible
+window**:
+
+```bash
+./install.sh
+```
+
+This installs a LaunchAgent (`~/Library/LaunchAgents/com.streamdeck-profile-switch.daemon.plist`,
+`RunAtLoad` + `KeepAlive`) that runs the daemon via `/bin/bash`.
+
+Then grant Accessibility **to `/bin/bash`** (the LaunchAgent's program):
+System Settings → Privacy & Security → Accessibility → **+** → `⌘⇧G` →
+`/bin/bash` → add it → enable the toggle. Because the daemon now runs under
+launchd (not your terminal), it's `/bin/bash` — not Terminal — that needs the
+grant. **Verified working.**
+
+**Re-run `./install.sh` after granting**, so the daemon restarts and picks up the
+permission — TCC is evaluated when the process starts, so a daemon launched
+*before* the grant won't see it. (This is the one gotcha.)
+
+- Enabling `/bin/bash` is a **broad** grant (every bash script gets
+  Accessibility) — fine on a personal machine; to scope it tighter you'd host the
+  daemon in a properly signed app instead (not shipped here).
+- `./install.sh --uninstall` removes the LaunchAgent.
+- Generate ghost + signal apps for all switchable profiles at once with
+  [`bin/gen-apps.sh`](bin/gen-apps.sh).
+
 ### MIDI trigger (optional, no signal apps)
 
 If you'd rather trigger from a **controller, pedal, Bome, or your DAW**,
