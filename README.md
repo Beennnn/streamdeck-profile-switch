@@ -145,47 +145,91 @@ editor is already closed (or when you close it yourself first). Pass
 Ghost apps themselves need **no permission** — they only become frontmost and
 quit.
 
-## Trigger a switch from a script, MIDI, or a button — the daemon
+## Trigger a switch from a button — even with the editor open
 
-A Stream Deck button can't switch profiles on its own while the editor is open:
-the switch mechanisms (app-linked profiles, the WebSocket API) are all suppressed
-until the editor closes, and a button's ad-hoc apps can't close it (they don't
-get Accessibility — see [findings](#investigations--findings)). The way around it
-is to **decouple the trigger from the privileged action** with a small daemon
-that runs in a terminal you've granted Accessibility:
+This is the part that took the most digging, so here is the whole architecture
+and *why it is shaped this way*.
 
-- the **trigger only signals** — no permission needed;
-- the **daemon** runs `sd-profile.sh` (close the editor, then switch), inheriting
-  the terminal's (robust, properly-signed) Accessibility — which is why it works
-  where a stand-alone signed applet failed with `1002`.
+### The architecture
 
-A **physical deck press fires its action even while the editor is open** (the
-editor only intercepts *software* clicks on keys, not hardware presses). So a
-button wired to *signal the daemon* switches even while you're editing — writing
-the trigger needs no permission, and the daemon does the privileged part.
-
-Two triggers — pick one (or both):
-
-**File / FIFO** — [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh): the trigger
-writes a profile name to a FIFO. A Stream Deck **button** using a `do shell script`
-(OSAScript) action does exactly this — and it works **even with the editor open**.
-
-```bash
-bin/sd-switch-daemon.sh                 # watches /tmp/sd-switch
-echo "Live Set" > /tmp/sd-switch        # from a shell, or from an OSAScript button
+```
+  Stream Deck BUTTON                         (needs NO permission)
+   ├─ built-in "Open Application" action ──┐
+   ├─ trevligaspel MIDI plugin {launch}    │   launches a tiny
+   └─ OSAScript / any launcher             │   "signal app"…
+                                           ▼
+              SD-sig - <profile>.app  ──►  writes "<profile>" to a FIFO (/tmp/sd-switch)
+                                           │
+        ┌──────────────────────────────────▼───────────────────────────────┐
+        │  DAEMON — a small shell loop reading the FIFO                      │
+        │  (runs in a process that HOLDS Accessibility: a terminal, or a     │
+        │   launchd agent). It runs sd-profile.sh "<profile>":               │
+        │     1. close the Stream Deck editor window   (Cmd-W, needs Accessibility)
+        │     2. wait ~0.8 s for the editor lock to release                  │
+        │     3. launch the ghost app → it goes frontmost → SD switches      │
+        └───────────────────────────────────────────────────────────────────┘
 ```
 
-**MIDI** — [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py): a MIDI note/CC
-triggers the switch (map notes → profiles in
-[`bin/sd-midi-map.json`](bin/sd-midi-map.json)). Handy when the trigger should
-come from a controller, a pedal, Bome, or your DAW rather than the deck.
+### Why it is shaped this way (what we learned)
+
+- **You must close the editor first.** While the editor window is open, *every*
+  switch mechanism (app-linked profiles, the WebSocket API) is suppressed.
+  Closing it needs Accessibility.
+- **The button can't close the editor itself.** The apps a button launches are
+  ad-hoc-signed, and **ad-hoc AppleScript applets never get a working
+  Accessibility grant** on current macOS (verified: `-25211` even when granted;
+  a *properly signed* helper got further but failed posting keystrokes with
+  `1002`). See [findings](#investigations--findings).
+- **So we decouple:** the button only **signals** (writes a file — zero
+  permission), and a **daemon** that *does* hold Accessibility (because it runs
+  inside a terminal you granted it) does the privileged close-then-switch. This
+  is the crux.
+- **A physical deck press fires its action even while the editor is open** (the
+  editor only intercepts *software* clicks on keys, not hardware presses) — so a
+  signalling button works while you edit.
+
+### Setup
+
+1. **Grant your terminal Accessibility** (System Settings → Privacy & Security →
+   Accessibility). This is the *only* permission in the whole system.
+2. **Run the daemon** (from that terminal, or a launchd agent):
+   ```bash
+   bin/sd-switch-daemon.sh                 # watches /tmp/sd-switch
+   ```
+3. **Build one signal app per profile** and **bind a button to launch it**:
+   ```bash
+   bin/make-signal-app.sh "Live Set"       # → ~/Applications/SD-sig - Live Set.app
+   ```
+   Then, on a button, use **either**:
+   - the built-in **"Open Application"** action → pick `SD-sig - Live Set.app`
+     *(no plugin, no MIDI — this is the "base Stream Deck" path)*; **or**
+   - the trevligaspel MIDI plugin, script `[(press){launch:"…/SD-sig - Live Set.app"}]`.
+
+   Both were tested working **with the editor open**.
+
+> **Note — one app per profile.** The built-in "Open Application" action does
+> **not** forward its *Arguments* field to the launched app (verified), so the
+> profile name is baked into each signal app rather than passed as an argument.
+> `make-signal-app.sh` generates them; they need no permission and no binding.
+
+### MIDI trigger (optional, no signal apps)
+
+If you'd rather trigger from a **controller, pedal, Bome, or your DAW**,
+[`bin/sd-switch-midi.py`](bin/sd-switch-midi.py) maps a MIDI note/CC → profile
+(no per-profile apps, just a JSON map). It opens a virtual "SD Profile Switch"
+port you route MIDI to. Requires `mido` + `python-rtmidi`.
 
 ```bash
-bin/sd-switch-midi.py                   # opens a virtual "SD Profile Switch" port
+bin/sd-switch-midi.py
 ```
 
-Requires `mido` + `python-rtmidi`. Route MIDI to the virtual port and map notes
-to profiles.
+### Response time
+
+The `~0.8 s` in step 2 is the tunable knob (in `sd-profile.sh`): it's the delay
+after closing the editor before switching, because Stream Deck releases the lock
+a beat late (0.2 s was too short; ~0.8–1.3 s is reliable). It applies **only when
+the editor was actually open** — with the editor closed (a live gig) there is no
+wait and the switch is near-instant.
 
 Keep the daemon alive from a login terminal, or a launchd agent (verify
 Accessibility attribution for launchd-spawned processes in your setup).
@@ -211,6 +255,20 @@ Recorded here so you don't have to rediscover them.
   button firing. So a button that merely *signals* the daemon (an OSAScript
   `do shell script` writing the FIFO) works even with the editor open: the daemon
   holds the Accessibility to close the editor, then switches.
+
+- **The built-in "Open Application" action does NOT forward its Arguments.** We
+  hoped for a single signal app taking the profile name as an argument
+  (`open -a app --args "X"` *does* deliver it), but the Stream Deck action
+  launches the app without passing its Arguments field — the app receives none.
+  So each profile gets its own baked-in signal app instead
+  (`bin/make-signal-app.sh`). The trevligaspel `{launch}` command likewise passes
+  its parameter as a *document* (`open -a app "X"`, treated as a file), not as an
+  argument — same conclusion.
+
+- **After closing the editor, wait ~0.8 s before switching.** The editor lock
+  releases a beat after the window closes; 0.2 s dropped the switch, ~0.8–1.3 s is
+  reliable. `sd-profile.sh` waits only when it actually closed a window, so the
+  editor-closed path stays fast.
 
 - **After closing the editor, wait before switching.** The editor lock is
   released a beat *after* the window closes. Close-then-switch in one tight
@@ -257,7 +315,8 @@ Recorded here so you don't have to rediscover them.
 | [`bin/sd-switch-daemon.sh`](bin/sd-switch-daemon.sh) | FIFO watcher: switch by writing a profile name to `/tmp/sd-switch` (works even with the editor open) |
 | [`bin/sd-switch-midi.py`](bin/sd-switch-midi.py) | MIDI watcher: a note/CC switches a profile (trigger from a controller, pedal, Bome, or DAW) |
 | [`bin/sd-midi-map.example.json`](bin/sd-midi-map.example.json) | example note/CC → profile map (copy to `sd-midi-map.json`, which is git-ignored) |
-| [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app |
+| [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app (the switch target) |
+| [`bin/make-signal-app.sh`](bin/make-signal-app.sh) | Build a `SD-sig - <name>.app` signal app (a button launches it to trigger the daemon; works with the editor open) |
 | [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
 
 ## Disclaimer

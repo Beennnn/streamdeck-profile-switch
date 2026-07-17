@@ -68,7 +68,7 @@ OSA
     echo "    System Settings → Privacy & Security → Accessibility → enable your terminal." >&2
   fi
   if [[ "$result" == "closed" ]]; then
-    sleep 1.3   # laisser Stream Deck relacher le verrou avant la bascule
+    sleep 0.8   # laisser Stream Deck relacher le verrou avant la bascule
   else
     sleep 0.1
   fi
