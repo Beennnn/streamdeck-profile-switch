@@ -33,8 +33,16 @@ echo toggle > /tmp/sd-switch # or hide / show the editor window
 
 You're mid-set (or mid-edit) and you want a **button — or a MIDI script, or a
 shell command — to jump the Stream Deck to a named profile.** Stream Deck offers
-no such command, and every known workaround breaks the moment the configuration
+no such command, and every known approach breaks the moment the configuration
 window is open. This project makes it work anyway, reliably.
+
+A concrete example: a live musician switches profiles between songs during a
+show, while keeping the editor open to fine-tune the layout during set-up and
+soundcheck — today that means closing the editor to switch, then reopening it to
+keep tuning, over and over. DeckShift removes that dance. And since the *same
+person* is both editing and performing, there's no risk of a switch surprising
+anyone — it's all their own intent (this is the [safeguard](#why-this-respects-elgatos-design-and-doesnt-reintroduce-what-they-guard-against)
+point, made concrete).
 
 ## The constraints we work within (Apple + Elgato)
 
