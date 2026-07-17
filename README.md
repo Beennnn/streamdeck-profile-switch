@@ -186,6 +186,8 @@ and *why it is shaped this way*.
 
 ### The architecture
 
+![Architecture — the button only signals; a daemon holding Accessibility closes the editor then switches](docs/architecture.png)
+
 ```
   Stream Deck BUTTON                         (needs NO permission)
    ├─ built-in "Open Application" action ──┐

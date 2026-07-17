@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 860" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="860" height="860" fill="#f7f8fa"/>
+
+  <!-- Title -->
+  <text x="430" y="42" text-anchor="middle" font-size="24" font-weight="700" fill="#0f172a">Stream Deck — switch profiles even with the editor OPEN</text>
+  <text x="430" y="66" text-anchor="middle" font-size="14" fill="#64748b">The button only SIGNALS (no permission). A daemon holds Accessibility and does the privileged part.</text>
+
+  <!-- Zone: NO PERMISSION (blue) -->
+  <rect x="30" y="90" width="800" height="368" rx="16" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="52" y="116" font-size="12.5" font-weight="700" fill="#2563eb" letter-spacing="0.5">TRIGGER SIDE — needs NO permission</text>
+
+  <!-- Button -->
+  <rect x="230" y="130" width="400" height="96" rx="12" fill="#ffffff" stroke="#93c5fd" stroke-width="1.6" filter="url(#sh)"/>
+  <text x="430" y="156" text-anchor="middle" font-size="16" font-weight="700" fill="#1e3a8a">Stream Deck button</text>
+  <text x="430" y="181" text-anchor="middle" font-size="13.5" fill="#334155">▸ built-in “Open Application” action  (no plugin)</text>
+  <text x="430" y="203" text-anchor="middle" font-size="13.5" fill="#334155">▸ or trevligaspel MIDI plugin  {launch:"…"}</text>
+
+  <line x1="430" y1="226" x2="430" y2="262" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="446" y="248" font-size="12.5" fill="#64748b" font-style="italic">launches</text>
+
+  <!-- Signal app -->
+  <rect x="255" y="264" width="350" height="66" rx="12" fill="#ffffff" stroke="#93c5fd" stroke-width="1.6" filter="url(#sh)"/>
+  <text x="430" y="290" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a">Signal app — SD-sig - &lt;profile&gt;.app</text>
+  <text x="430" y="312" text-anchor="middle" font-size="12.5" fill="#334155">writes the profile name to a file — no permission</text>
+
+  <line x1="430" y1="330" x2="430" y2="366" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="446" y="352" font-size="12.5" fill="#64748b" font-style="italic">writes name</text>
+
+  <!-- FIFO -->
+  <rect x="300" y="368" width="260" height="52" rx="26" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.6"/>
+  <text x="430" y="392" text-anchor="middle" font-size="14" font-weight="700" fill="#1e40af">FIFO  (named pipe)</text>
+  <text x="430" y="410" text-anchor="middle" font-size="12.5" fill="#1e40af" font-family="ui-monospace, Menlo, monospace">/tmp/sd-switch</text>
+
+  <!-- transition arrow to daemon -->
+  <line x1="430" y1="458" x2="430" y2="498" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <text x="446" y="482" font-size="12.5" fill="#64748b" font-style="italic">read by</text>
+
+  <!-- Zone: HAS ACCESSIBILITY (amber) -->
+  <rect x="30" y="500" width="800" height="230" rx="16" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5"/>
+  <text x="52" y="526" font-size="12.5" font-weight="700" fill="#d97706" letter-spacing="0.5">PRIVILEGED SIDE — runs in a terminal that HAS Accessibility</text>
+
+  <rect x="150" y="540" width="560" height="172" rx="12" fill="#ffffff" stroke="#fbbf24" stroke-width="1.6" filter="url(#sh)"/>
+  <text x="430" y="566" text-anchor="middle" font-size="16" font-weight="700" fill="#92400e">DAEMON — a tiny shell loop reading the FIFO</text>
+  <text x="430" y="586" text-anchor="middle" font-size="12" fill="#a16207">no server · no WebSocket · no network</text>
+
+  <text x="196" y="620" font-size="13.5" fill="#1f2937"><tspan font-weight="700" fill="#b45309">1.</tspan>  Close the Stream Deck editor window  (⌘W — needs Accessibility)</text>
+  <text x="196" y="650" font-size="13.5" fill="#1f2937"><tspan font-weight="700" fill="#b45309">2.</tspan>  Wait ~0.8 s for the editor lock to release</text>
+  <text x="196" y="680" font-size="13.5" fill="#1f2937"><tspan font-weight="700" fill="#b45309">3.</tspan>  Launch the ghost app → it goes frontmost</text>
+
+  <!-- arrow to switch -->
+  <line x1="430" y1="730" x2="430" y2="766" stroke="#64748b" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- Result -->
+  <rect x="230" y="768" width="400" height="60" rx="12" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.8" filter="url(#sh)"/>
+  <text x="430" y="793" text-anchor="middle" font-size="15" font-weight="700" fill="#065f46">Stream Deck switches to the linked profile</text>
+  <text x="430" y="814" text-anchor="middle" font-size="12" fill="#047857">via the app-linked profile (AppIdentifier) — the classic ghost-app trick</text>
+
+  <!-- side badge -->
+  <g transform="translate(748,300)">
+    <rect x="-8" y="-70" width="96" height="140" rx="12" fill="#16a34a"/>
+    <text x="40" y="-38" text-anchor="middle" font-size="20" fill="#ffffff" font-weight="700">✓</text>
+    <text x="40" y="-14" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="700">works</text>
+    <text x="40" y="4" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="700">with the</text>
+    <text x="40" y="22" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="700">editor</text>
+    <text x="40" y="40" text-anchor="middle" font-size="12" fill="#ffffff" font-weight="700">OPEN</text>
+  </g>
+</svg>
