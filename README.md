@@ -86,10 +86,9 @@ users the capability Elgato's own UI already hints at — **reliably, even with 
 editor open** — **without** reintroducing the uncontrolled, plugin-initiated
 switching the sandbox is there to prevent. The control stays with the user.
 
-That's the lens we'd bring to any conversation with Elgato: this fills a real
-gap (script/MIDI-driven profile switching) *while honouring the reason the API
-is sandboxed* — and the cleanest end-state would be an official capability from
-Elgato that makes tools like this unnecessary.
+In short: this fills a real gap (script/MIDI-driven profile switching) *while
+honouring the reason the API is sandboxed* — and the cleanest end-state would be
+an official capability from Elgato that makes tools like this unnecessary.
 
 ---
 
@@ -491,13 +490,12 @@ a switch with `{launch:"…/DeckShift/…app"}` pointing at that install path. T
 MIDI trigger stays first-class, side by side with the native action.
 
 **Distribution.**
-- **GitHub `.streamDeckPlugin`** (double-click install, no review) — the primary
-  target; gets the one-click + no-per-profile-apps win without gatekeeping.
-- **Elgato Marketplace / Store** — separate, and **sensitive**: submissions are
-  reviewed and bound by the Maker Agreement; a plugin framed around "work around
-  the editor lock" (or one shipping an Accessibility helper) may draw scrutiny.
-  To be assessed on its own — read the Maker Agreement first, and frame it as
-  *reliable script/MIDI-driven profile switching* (a legitimate use case).
+- **GitHub `.streamDeckPlugin`** — packaged with Elgato's `streamdeck` CLI and
+  installed by double-click (the standard sideload path): one-click install, and
+  the signal apps are gone (the target profile lives in the action's settings).
+- **Elgato Marketplace** — we'd like to offer it there too, done properly.
+  Marketplace submissions go through Elgato's review and Maker Agreement, so we've
+  reached out to Elgato to confirm the right way to do it.
 
 Design notes and help welcome — see below.
 
