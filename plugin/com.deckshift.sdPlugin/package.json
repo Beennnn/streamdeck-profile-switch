@@ -1,0 +1,10 @@
+{
+  "name": "com.deckshift.sdplugin",
+  "version": "0.1.0",
+  "description": "DeckShift Stream Deck plugin — switch profiles / hide-show-toggle the editor.",
+  "private": true,
+  "main": "plugin.js",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

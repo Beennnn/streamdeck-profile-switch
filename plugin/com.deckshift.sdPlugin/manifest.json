@@ -1,0 +1,50 @@
+{
+  "Name": "DeckShift",
+  "Version": "0.1.0.0",
+  "Author": "Beennnn",
+  "URL": "https://github.com/Beennnn/deckshift",
+  "Description": "Switch Stream Deck profiles by name and hide/show/toggle the config window — reliably, even while the editor is open.",
+  "Category": "DeckShift",
+  "CategoryIcon": "icons/category",
+  "Icon": "icons/plugin",
+  "SDKVersion": 2,
+  "Software": { "MinimumVersion": "6.5" },
+  "OS": [{ "Platform": "mac", "MinimumVersion": "12.0" }],
+  "Nodejs": { "Version": "20", "Debug": "enabled" },
+  "CodePath": "plugin.js",
+  "Actions": [
+    {
+      "Name": "Switch Profile",
+      "UUID": "com.deckshift.switch",
+      "Icon": "icons/switch",
+      "Tooltip": "Switch to a profile by name — works even with the editor open.",
+      "PropertyInspectorPath": "pi/switch-profile.html",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "icons/switch", "TitleAlignment": "bottom" }]
+    },
+    {
+      "Name": "Hide Editor",
+      "UUID": "com.deckshift.hide",
+      "Icon": "icons/hide",
+      "Tooltip": "Close the Stream Deck configuration window.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "icons/hide" }]
+    },
+    {
+      "Name": "Show Editor",
+      "UUID": "com.deckshift.show",
+      "Icon": "icons/show",
+      "Tooltip": "Open the Stream Deck configuration window.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "icons/show" }]
+    },
+    {
+      "Name": "Toggle Editor",
+      "UUID": "com.deckshift.toggle",
+      "Icon": "icons/toggle",
+      "Tooltip": "Toggle the Stream Deck configuration window.",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "icons/toggle" }]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DeckShift — Switch Profile</title>
+  <style>
+    body { font: 12px -apple-system, "Segoe UI", sans-serif; margin: 10px; color: #ddd; }
+    label { display:block; margin: 4px 0 2px; opacity:.8; }
+    input { width: 100%; box-sizing: border-box; padding: 6px; border-radius: 4px;
+            border: 1px solid #555; background:#2d2d2d; color:#eee; }
+    .hint { opacity:.55; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <label for="prof">Profile name (exact, or a unique substring)</label>
+  <input id="prof" type="text" placeholder="e.g. Live Set" />
+  <div class="hint">DeckShift closes the editor if it's open, then switches — even mid-edit.
+    The DeckShift daemon must be running (see the repo's install.sh).</div>
+
+  <script>
+    let ws, ctx, settings = {};
+    function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+      ctx = uuid;
+      try { settings = (JSON.parse(actionInfo).payload || {}).settings || {}; } catch (e) {}
+      document.getElementById("prof").value = settings.profileName || "";
+      ws = new WebSocket("ws://127.0.0.1:" + port);
+      ws.onopen = () => ws.send(JSON.stringify({ event: registerEvent, uuid }));
+    }
+    function save() {
+      settings.profileName = document.getElementById("prof").value;
+      if (ws && ws.readyState === 1)
+        ws.send(JSON.stringify({ event: "setSettings", context: ctx, payload: settings }));
+    }
+    document.getElementById("prof").addEventListener("input", save);
+  </script>
+</body>
+</html>

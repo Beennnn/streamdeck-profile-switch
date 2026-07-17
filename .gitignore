@@ -1,3 +1,6 @@
 .DS_Store
 *.swp
 bin/sd-midi-map.json
+
+# plugin deps (run npm install locally)
+plugin/**/node_modules/
