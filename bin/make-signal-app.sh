@@ -44,7 +44,7 @@ cat > "$app/Contents/Info.plist" <<EOF
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>CFBundleExecutable</key><string>sig</string>
-  <key>CFBundleIdentifier</key><string>com.streamdeck-profile-switch.sig.${slug}</string>
+  <key>CFBundleIdentifier</key><string>com.deckshift.sig.${slug}</string>
   <key>CFBundleName</key><string>SD-sig - ${name}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSBackgroundOnly</key><true/>

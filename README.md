@@ -1,16 +1,20 @@
-# Stream Deck — switch profiles by name, from the command line
+# DeckShift
 
-Switch your Elgato **Stream Deck** to any profile **by its name**, from a
-script or the terminal — **even when the Stream Deck configuration window is
-open**.
+**Switch your Elgato Stream Deck to any profile by name — and hide/show/toggle
+the config window — from a button, a script, or MIDI. Reliably, *even while the
+Stream Deck editor window is open*.**
 
 ```bash
-sd-profile.sh "Live Set"
-sd-profile.sh "Ableton — Record"
+sd-profile.sh "Live Set"     # switch profile
+echo toggle > /tmp/sd-switch # or hide / show the editor window
 ```
 
-No plugin to write, no WebSocket server to keep alive. Just macOS + a small
-technique Stream Deck already supports: **app-linked profiles** ("ghost apps").
+> **Status & goal.** Today DeckShift ships as **working scripts + generators**
+> (documented below) — this is the reference implementation, in daily use.
+> The **goal of this repo is to turn it into a one-click Stream Deck plugin**
+> (a `.streamDeckPlugin`) that keeps the same reliability but drops the
+> per-profile apps and installs in a double-click. See
+> **[Roadmap — the plugin](#roadmap--the-deckshift-plugin)**.
 
 > Uses only documented, supported Stream Deck features (app-linked profiles)
 > and standard macOS automation. Nothing about the Stream Deck software is
@@ -119,8 +123,8 @@ the editor-closing lives in `sd-profile.sh`, run from your terminal.
 ## Install
 
 ```bash
-git clone https://github.com/Beennnn/streamdeck-profile-switch.git
-cd streamdeck-profile-switch
+git clone https://github.com/Beennnn/deckshift.git
+cd deckshift
 chmod +x bin/*.sh
 # optional: put bin/ on your PATH, or symlink sd-profile.sh somewhere handy
 ```
@@ -258,7 +262,7 @@ window**:
 ./install.sh
 ```
 
-This installs a LaunchAgent (`~/Library/LaunchAgents/com.streamdeck-profile-switch.daemon.plist`,
+This installs a LaunchAgent (`~/Library/LaunchAgents/com.deckshift.daemon.plist`,
 `RunAtLoad` + `KeepAlive`) that runs the daemon via `/bin/bash`.
 
 Then grant Accessibility **to `/bin/bash`** (the LaunchAgent's program):
@@ -405,6 +409,45 @@ Recorded here so you don't have to rediscover them.
 | [`bin/make-ghost-app.sh`](bin/make-ghost-app.sh) | Build a `SD_switch - <name>.app` ghost app (the switch target) |
 | [`bin/make-signal-app.sh`](bin/make-signal-app.sh) | Build a `SD-sig - <name>.app` signal app (a button launches it to trigger the daemon; works with the editor open) |
 | [`ghost-app/main.applescript`](ghost-app/main.applescript) | The applet source (become frontmost → quit) |
+
+## Roadmap — the DeckShift plugin
+
+The scripts above work, but they cost **two tiny apps per profile** (ghost +
+signal) and a manual button wiring. The goal of this repo is a proper
+**`.streamDeckPlugin`** that keeps the reliability and removes that friction.
+
+**Native actions** (target picked in the Property Inspector, no per-profile apps):
+- **Switch Profile** — choose the target profile from a dropdown.
+- **Hide / Show / Toggle editor**.
+
+**How it will avoid ghost + signal apps.** A Stream Deck plugin owns a WebSocket
+connection to the app, so it can call the `switchToProfile` API directly — *once
+the editor is closed*. So the flow becomes: press → the plugin asks a small
+**bundled helper** (the only piece that holds Accessibility) to close the editor
+→ the plugin switches via its own API. No ghost apps, no signal apps, no FIFO.
+
+**The Accessibility helper is still unavoidable** (a plugin process is sandboxed
+and can't close the editor itself — the whole reason this was hard). The plugin
+will ship a **properly signed helper** (Developer-ID ideally — reliable keystroke
+posting, unlike the ad-hoc applets that failed with `1002`), which the user
+enables in Accessibility **once**.
+
+**Interop with the trevligaspel MIDI plugin (design requirement).** The plugin
+must install its callable helper/app at a **known, documented location** (e.g.
+under `~/Library/Application Support/DeckShift/`), so a MidiScript can still fire
+a switch with `{launch:"…/DeckShift/…app"}` pointing at that install path. The
+MIDI trigger stays first-class, side by side with the native action.
+
+**Distribution.**
+- **GitHub `.streamDeckPlugin`** (double-click install, no review) — the primary
+  target; gets the one-click + no-per-profile-apps win without gatekeeping.
+- **Elgato Marketplace / Store** — separate, and **sensitive**: submissions are
+  reviewed and bound by the Maker Agreement; a plugin framed around "work around
+  the editor lock" (or one shipping an Accessibility helper) may draw scrutiny.
+  To be assessed on its own — read the Maker Agreement first, and frame it as
+  *reliable script/MIDI-driven profile switching* (a legitimate use case).
+
+Design notes and help welcome — see below.
 
 ## Contributing & alternatives
 

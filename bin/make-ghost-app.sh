@@ -53,7 +53,7 @@ osacompile -o "$app_path" "$applescript"
 # permission (no Automation, no Accessibility), so nothing else to set up here.
 # On pose quand même un bundle identifier commun (propreté / dédoublonnage
 # LaunchServices) ; ce n'est PAS requis pour que la bascule fonctionne.
-GHOST_BUNDLE_ID="com.streamdeck-profile-switch.ghostapp"
+GHOST_BUNDLE_ID="com.deckshift.ghostapp"
 /usr/bin/defaults write "$app_path/Contents/Info.plist" CFBundleIdentifier "$GHOST_BUNDLE_ID" 2>/dev/null || true
 
 echo "✅ Ghost app créée :"

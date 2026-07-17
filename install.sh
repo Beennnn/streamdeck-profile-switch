@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# install.sh — set up streamdeck-profile-switch to run permanently (no terminal
+# install.sh — set up deckshift to run permanently (no terminal
 # window to keep open, survives logout/reboot).
 #
 # What it does:
@@ -19,7 +19,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 BIN="$REPO/bin"
-LABEL="com.streamdeck-profile-switch.daemon"
+LABEL="com.deckshift.daemon"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 DAEMON="$BIN/sd-switch-daemon.sh"
 
