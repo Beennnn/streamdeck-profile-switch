@@ -25,14 +25,27 @@ be running** (`../install.sh`), and `/bin/bash` must have Accessibility.
 The win vs the scripts: the **target profile lives in the action's settings**, so
 there are no ghost/signal apps to generate per profile.
 
-## Roadmap (v0.2 — self-contained)
+## Roadmap (v0.2 — bundle the close helper)
 
-Drop the external daemon: switch via this plugin's own WebSocket
-`switchToProfile` API **after** a **bundled, signed helper** closes the editor
-(the only piece that needs Accessibility). Install that helper at a documented
-path (e.g. `~/Library/Application Support/DeckShift/`) so the **trevligaspel MIDI
-plugin can still call it** with `{launch:"…/DeckShift/…app"}` — MIDI stays a
-first-class trigger next to the native action.
+Goal: drop the external daemon. Two things to know first (see the main README):
+
+- **The ghost apps stay.** `switchToProfile` is restricted by Elgato to profiles
+  the *plugin* bundles — it **can't switch a user's own profiles** — so the plugin
+  still launches per-profile ghost apps to switch. It only removes the *signal*
+  apps.
+- **Closing the editor still needs Accessibility.** So "self-contained" = the
+  plugin ships the editor-close capability instead of relying on the daemon:
+  1. **cheapest, untested:** grant Accessibility to **`Elgato Stream Deck.app`**
+     and close the editor from the plugin's own `osascript` (if macOS attributes
+     it to the Developer-ID-signed SD app, keystrokes post). Also the natural
+     **request to Elgato** — an official close-editor / user-profile-switch
+     capability would retire these hacks.
+  2. a **bundled signed helper** (Swift/ObjC, Developer-ID) — real dev + signing.
+
+Install the helper at a documented path (e.g.
+`~/Library/Application Support/DeckShift/`) so the **trevligaspel MIDI plugin can
+still call it** with `{launch:"…/DeckShift/…app"}` — MIDI stays first-class next
+to the native action.
 
 ## Build & install (dev)
 

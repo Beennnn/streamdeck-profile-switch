@@ -412,25 +412,40 @@ Recorded here so you don't have to rediscover them.
 
 ## Roadmap — the DeckShift plugin
 
-The scripts above work, but they cost **two tiny apps per profile** (ghost +
-signal) and a manual button wiring. The goal of this repo is a proper
-**`.streamDeckPlugin`** that keeps the reliability and removes that friction.
+The scripts work, but they cost **two tiny apps per profile** (ghost + signal)
+plus manual wiring. The goal of this repo is a proper **`.streamDeckPlugin`** —
+without over-promising what it can remove.
 
-**Native actions** (target picked in the Property Inspector, no per-profile apps):
-- **Switch Profile** — choose the target profile from a dropdown.
+**Native actions** (configured in the Property Inspector):
+- **Switch Profile** — pick the target profile by name.
 - **Hide / Show / Toggle editor**.
 
-**How it will avoid ghost + signal apps.** A Stream Deck plugin owns a WebSocket
-connection to the app, so it can call the `switchToProfile` API directly — *once
-the editor is closed*. So the flow becomes: press → the plugin asks a small
-**bundled helper** (the only piece that holds Accessibility) to close the editor
-→ the plugin switches via its own API. No ghost apps, no signal apps, no FIFO.
+**What the plugin removes — and what it doesn't** (clear-eyed):
+- ✅ removes the **signal apps** — the target profile lives in the action's
+  settings, so the plugin launches the ghost app directly, and adds a real UI +
+  one-click install.
+- ❌ does **not** remove the **ghost apps**. It's tempting to switch via the
+  plugin's own `switchToProfile` WebSocket API, but **Elgato restricts that API to
+  profiles the *plugin* bundles — it cannot switch a user's own profiles** (the
+  exact reason the ghost-app trick exists). So the ghost apps stay as the switch
+  engine, in the plugin too.
+- ❌ does **not** remove the need for **Accessibility to close the editor** — a
+  plugin process is sandboxed and can't do it alone.
 
-**The Accessibility helper is still unavoidable** (a plugin process is sandboxed
-and can't close the editor itself — the whole reason this was hard). The plugin
-will ship a **properly signed helper** (Developer-ID ideally — reliable keystroke
-posting, unlike the ad-hoc applets that failed with `1002`), which the user
-enables in Accessibility **once**.
+**So "self-contained" really means: bundle the editor-close helper.** Options,
+cheapest first:
+
+1. **Grant Accessibility to `Elgato Stream Deck.app` itself**, and let the plugin
+   close the editor with its own `osascript`. *If* macOS attributes that call to
+   the (Developer-ID-signed) Stream Deck app, keystroke posting works and **no
+   separate helper is needed**. Untested — the cheapest path, worth trying first.
+   **This is also the natural request to make to Elgato:** a supported way to
+   close the editor (or an official blessing to grant the app Accessibility for
+   plugins) would retire this whole class of hacks — and an official *"switch to a
+   user profile"* API would retire the ghost apps entirely.
+2. A **bundled, properly signed helper** (a small Swift/ObjC binary that posts the
+   keystroke; Developer-ID ideally — the self-signed applet failed with `1002`).
+   Real dev + signing (a paid Apple account for Developer-ID).
 
 **Interop with the trevligaspel MIDI plugin (design requirement).** The plugin
 must install its callable helper/app at a **known, documented location** (e.g.

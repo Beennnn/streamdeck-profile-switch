@@ -10,9 +10,12 @@
 //     action's settings and is written to the FIFO on press;
 //   • it reuses the daemon + the one Accessibility grant you already set up.
 //
-// ROADMAP (v0.2+, self-contained): drop the external daemon by (a) switching via
-// this plugin's own WebSocket `switchToProfile` API *after* (b) a bundled, signed
-// helper closes the editor. Until then, the daemon must be running (install.sh).
+// ROADMAP (v0.2+): drop the external daemon by bundling the editor-close helper
+// in the plugin. NOTE: the ghost apps stay — Elgato's `switchToProfile` API can
+// only switch profiles the plugin bundles, NOT the user's own profiles, so the
+// plugin still launches per-profile ghost apps to switch. Until v0.2, the daemon
+// must be running (install.sh). See plugin/README.md for the helper options
+// (grant Accessibility to Stream Deck.app, or a signed helper).
 //
 // Stream Deck launches this with: -port N -pluginUUID U -registerEvent E -info J
 //
